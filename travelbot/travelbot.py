@@ -2,356 +2,252 @@ import re
 import random
 import json
 import os
-from datetime import datetime
+import datetime
 from colorama import Fore, Back, Style, init
 
 init(autoreset=True)
 
-# ─── Data ────────────────────────────────────────────────────────────────────
-
 destinations = {
-    "beaches": ["Bali", "Maldives", "Phuket", "Santorini", "Cancun"],
+    "beaches":   ["Bali", "Maldives", "Phuket", "Santorini", "Cancun"],
     "mountains": ["Swiss Alps", "Rocky Mountains", "Himalayas", "Patagonia", "Dolomites"],
-    "cities": ["Tokyo", "Paris", "New York", "Barcelona", "Singapore"],
-    "deserts": ["Sahara", "Wadi Rum", "Atacama", "Namib", "Sonoran"],
-    "forests": ["Amazon Rainforest", "Black Forest", "Daintree Rainforest", "Tongass", "Monteverde"],
+    "cities":    ["Tokyo", "Paris", "New York", "Barcelona", "Singapore"],
+    "deserts":   ["Sahara", "Wadi Rum", "Atacama", "Namib", "Sonoran"],
+    "forests":   ["Amazon Rainforest", "Black Forest", "Daintree Rainforest", "Tongass", "Monteverde"],
 }
 
 jokes = [
     "Why don't programmers like nature? Too many bugs!",
     "Why did the computer go to the doctor? Because it had a virus!",
     "Why do travelers always feel warm? Because of all their hot spots!",
-    "I told my suitcase there would be no vacation this year. Now I'm dealing with emotional baggage.",
+    "I told my suitcase there would be no vacation. Now I'm dealing with emotional baggage.",
     "Why did the map go to school? To improve its direction!",
 ]
 
-# Simulated weather data per destination
 weather_data = {
-    "bali":        {"temp": "29°C", "condition": "Sunny with light breezes"},
-    "maldives":    {"temp": "31°C", "condition": "Clear skies, perfect beach weather"},
-    "phuket":      {"temp": "33°C", "condition": "Hot and humid"},
-    "tokyo":       {"temp": "18°C", "condition": "Partly cloudy"},
-    "paris":       {"temp": "14°C", "condition": "Light showers"},
-    "new york":    {"temp": "10°C", "condition": "Overcast with wind"},
-    "swiss alps":  {"temp": "-2°C", "condition": "Heavy snowfall"},
-    "himalayas":   {"temp": "-10°C", "condition": "Freezing, clear at high altitudes"},
-    "barcelona":   {"temp": "22°C", "condition": "Sunny and warm"},
-    "singapore":   {"temp": "30°C", "condition": "Tropical, expect afternoon showers"},
-    "santorini":   {"temp": "25°C", "condition": "Sunny Mediterranean weather"},
-    "cancun":      {"temp": "34°C", "condition": "Hot with occasional thunderstorms"},
-    "patagonia":   {"temp": "8°C", "condition": "Windy and unpredictable"},
-    "amazon rainforest": {"temp": "27°C", "condition": "Rainy and very humid"},
+    "bali":       {"temp": "29°C", "condition": "Sunny with light breezes"},
+    "maldives":   {"temp": "31°C", "condition": "Clear skies, perfect beach weather"},
+    "phuket":     {"temp": "33°C", "condition": "Hot and humid"},
+    "tokyo":      {"temp": "18°C", "condition": "Partly cloudy"},
+    "paris":      {"temp": "14°C", "condition": "Light showers"},
+    "new york":   {"temp": "10°C", "condition": "Overcast with wind"},
+    "swiss alps": {"temp": "-2°C", "condition": "Heavy snowfall"},
+    "himalayas":  {"temp": "-10°C", "condition": "Freezing, clear at high altitudes"},
+    "barcelona":  {"temp": "22°C", "condition": "Sunny and warm"},
+    "singapore":  {"temp": "30°C", "condition": "Tropical, expect afternoon showers"},
 }
 
-# Local time offsets from UTC (in hours)
 city_timezones = {
-    "tokyo":         9,
-    "paris":         1,
-    "new york":     -5,
-    "barcelona":     1,
-    "singapore":     8,
-    "bali":          8,
-    "maldives":      5,
-    "phuket":        7,
-    "london":        0,
-    "dubai":         4,
-    "sydney":       10,
-    "los angeles": -8,
-    "mumbai":      5.5,
-    "cairo":         2,
-    "toronto":      -5,
+    "tokyo":     9,
+    "paris":     1,
+    "new york": -5,
+    "barcelona": 1,
+    "singapore": 8,
+    "bali":      8,
+    "london":    0,
+    "dubai":     4,
+    "sydney":   10,
 }
 
-# Simulated travel news
 travel_news = [
     "Visa-free travel expanded between 20 new country pairs this month.",
-    "Tokyo named the safest city in the world for solo travelers in 2026.",
+    "Tokyo named the safest city for solo travelers in 2026.",
     "Budget airlines launching new routes across Southeast Asia this summer.",
-    "Maldives opens new eco-resort built entirely from recycled materials.",
-    "Swiss Alps introduce night skiing season extended by two weeks this year.",
-    "Barcelona implements new short-term rental restrictions in city center.",
-    "Singapore's Changi Airport wins World's Best Airport for the 12th time.",
-    "Paris gears up for its biggest travel season following stadium renovations.",
+    "Maldives opens new eco-resort built from recycled materials.",
+    "Singapore Changi Airport wins World Best Airport again.",
 ]
-
-# Packing lists by trip type
-packing_lists = {
-    "beach":    ["Sunscreen (SPF 50+)", "Swimwear", "Flip-flops", "Beach towel", "Sunglasses", "Light linen clothes"],
-    "mountain": ["Thermal layers", "Waterproof jacket", "Hiking boots", "Gloves & beanie", "Trekking poles", "First-aid kit"],
-    "city":     ["Comfortable walking shoes", "Smart casual clothes", "Day backpack", "City map / offline maps", "Portable charger"],
-    "desert":   ["High-SPF sunscreen", "Wide-brim hat", "Light breathable clothing", "Plenty of water bottles", "Goggles for sandstorms"],
-    "forest":   ["Insect repellent", "Waterproof boots", "Rain poncho", "Long-sleeve shirts", "Binoculars", "Torch/headlamp"],
-}
 
 HISTORY_FILE = "conversation_history.json"
 
-# ─── Memory & History ─────────────────────────────────────────────────────────
+if os.path.exists(HISTORY_FILE):
+    f = open(HISTORY_FILE, "r")
+    history = json.load(f)
+    f.close()
+else:
+    history = {}
 
-conversation_memory = {}  # stores per-user session data
+print(Fore.WHITE + Back.BLUE + " TravelBot - Your AI Travel Companion " + Style.RESET_ALL)
+print(Fore.CYAN + "TravelBot: Hello! I am TravelBot. Let me help plan your next adventure!")
 
+name = input(Fore.YELLOW + "What is your name? ").strip()
+if name == "":
+    name = "Traveler"
 
-def load_history():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    return {}
+if name in history and len(history[name]) > 1:
+    print(Fore.GREEN + "TravelBot: Welcome back, " + name + "! Great to see you again.")
+else:
+    print(Fore.GREEN + "TravelBot: Nice to meet you, " + name + "!")
 
+if name not in history:
+    history[name] = []
 
-def save_history(history: dict):
-    with open(HISTORY_FILE, "w") as f:
+print(Fore.WHITE + Back.BLUE + " What I Can Do " + Style.RESET_ALL)
+print(Fore.GREEN + "  - recommend / suggest : Get a travel destination")
+print(Fore.GREEN + "  - packing / pack      : Get a packing list")
+print(Fore.GREEN + "  - weather             : Check weather at a destination")
+print(Fore.GREEN + "  - time                : Find local time in a city")
+print(Fore.GREEN + "  - news                : Read latest travel news")
+print(Fore.GREEN + "  - joke                : Hear a travel joke")
+print(Fore.GREEN + "  - history             : View chat history")
+print(Fore.GREEN + "  - help                : Show this menu")
+print(Fore.GREEN + "  - exit / bye          : End the conversation")
+print()
+
+running = True
+
+while running:
+    user_input = input(Fore.YELLOW + "\n" + name + ": ").strip()
+
+    if user_input == "":
+        continue
+
+    user_input_clean = re.sub(r"\s+", " ", user_input.strip().lower())
+
+    history[name].append({"role": "user", "text": user_input_clean})
+
+    if re.search(r"recommend|suggest|destination", user_input_clean):
+        print(Fore.CYAN + "TravelBot: Beaches, mountains, cities, deserts, or forests?")
+        getting_rec = True
+        while getting_rec:
+            pref_raw = input(Fore.YELLOW + "You: ")
+            pref = re.sub(r"\s+", " ", pref_raw.strip().lower())
+            if pref in destinations:
+                suggestion = random.choice(destinations[pref])
+                print(Fore.GREEN + "TravelBot: How about " + suggestion + "?")
+                print(Fore.CYAN + "TravelBot: Do you like it? (yes / no)")
+                ans_raw = input(Fore.YELLOW + "You: ")
+                answer = re.sub(r"\s+", " ", ans_raw.strip().lower())
+                if re.search(r"\byes\b", answer):
+                    print(Fore.GREEN + "TravelBot: Awesome! Enjoy your trip to " + suggestion + "!")
+                    getting_rec = False
+                else:
+                    print(Fore.RED + "TravelBot: Let's try another one.")
+            else:
+                print(Fore.RED + "TravelBot: Sorry, I don't have that type. Try: beaches, mountains, cities, deserts, forests.")
+                getting_rec = False
+
+    elif re.search(r"pack|packing|luggage|suitcase", user_input_clean):
+        print(Fore.CYAN + "TravelBot: What type of trip? (beach / mountain / city / desert / forest)")
+        trip_type_raw = input(Fore.YELLOW + "You: ")
+        trip_type = re.sub(r"\s+", " ", trip_type_raw.strip().lower())
+        print(Fore.CYAN + "TravelBot: Where are you headed?")
+        location_raw = input(Fore.YELLOW + "You: ")
+        location = re.sub(r"\s+", " ", location_raw.strip().lower())
+        print(Fore.CYAN + "TravelBot: How many days?")
+        days = input(Fore.YELLOW + "You: ").strip()
+        print(Fore.GREEN + "TravelBot: Packing list for " + days + " days in " + location.title() + ":")
+        if "beach" in trip_type:
+            print(Fore.GREEN + "  - Sunscreen SPF 50+")
+            print(Fore.GREEN + "  - Swimwear")
+            print(Fore.GREEN + "  - Flip-flops")
+            print(Fore.GREEN + "  - Beach towel")
+            print(Fore.GREEN + "  - Sunglasses")
+        elif "mountain" in trip_type:
+            print(Fore.GREEN + "  - Thermal layers")
+            print(Fore.GREEN + "  - Waterproof jacket")
+            print(Fore.GREEN + "  - Hiking boots")
+            print(Fore.GREEN + "  - Gloves and beanie")
+            print(Fore.GREEN + "  - First-aid kit")
+        elif "city" in trip_type:
+            print(Fore.GREEN + "  - Comfortable walking shoes")
+            print(Fore.GREEN + "  - Smart casual clothes")
+            print(Fore.GREEN + "  - Day backpack")
+            print(Fore.GREEN + "  - Portable charger")
+        elif "desert" in trip_type:
+            print(Fore.GREEN + "  - High SPF sunscreen")
+            print(Fore.GREEN + "  - Wide brim hat")
+            print(Fore.GREEN + "  - Light breathable clothing")
+            print(Fore.GREEN + "  - Plenty of water bottles")
+        elif "forest" in trip_type:
+            print(Fore.GREEN + "  - Insect repellent")
+            print(Fore.GREEN + "  - Waterproof boots")
+            print(Fore.GREEN + "  - Rain poncho")
+            print(Fore.GREEN + "  - Torch and headlamp")
+        else:
+            print(Fore.GREEN + "  - Pack versatile clothes")
+            print(Fore.GREEN + "  - Bring chargers and adapters")
+            print(Fore.GREEN + "  - Check the weather forecast")
+            print(Fore.GREEN + "  - Carry a copy of your documents")
+
+    elif re.search(r"weather|climate|temperature|forecast", user_input_clean):
+        print(Fore.CYAN + "TravelBot: Which destination do you want weather for?")
+        city_raw = input(Fore.YELLOW + "You: ")
+        city = re.sub(r"\s+", " ", city_raw.strip().lower())
+        if city in weather_data:
+            w = weather_data[city]
+            print(Fore.GREEN + "TravelBot: Weather in " + city.title() + ":")
+            print(Fore.GREEN + "  Temperature : " + w["temp"])
+            print(Fore.GREEN + "  Condition   : " + w["condition"])
+        else:
+            print(Fore.RED + "TravelBot: No weather data for " + city.title() + ". Try: Bali, Tokyo, Paris, etc.")
+
+    elif re.search(r"time|local time|timezone", user_input_clean):
+        print(Fore.CYAN + "TravelBot: Which city local time do you want?")
+        city_raw = input(Fore.YELLOW + "You: ")
+        city = re.sub(r"\s+", " ", city_raw.strip().lower())
+        if city in city_timezones:
+            offset = city_timezones[city]
+            utc_now = datetime.datetime.utcnow()
+            total_minutes = int(utc_now.hour * 60 + utc_now.minute + offset * 60)
+            local_hour = (total_minutes // 60) % 24
+            local_min = total_minutes % 60
+            if offset >= 0:
+                sign = "+"
+            else:
+                sign = ""
+            print(Fore.GREEN + "TravelBot: Local time in " + city.title() + ": " + str(local_hour).zfill(2) + ":" + str(local_min).zfill(2) + " (UTC" + sign + str(offset) + ")")
+        else:
+            print(Fore.RED + "TravelBot: No timezone data for " + city.title() + ". Try: Tokyo, Paris, New York, London, Dubai.")
+
+    elif re.search(r"news|latest|update|headline", user_input_clean):
+        print(Fore.WHITE + Back.BLUE + " Latest Travel News " + Style.RESET_ALL)
+        headlines = random.sample(travel_news, min(4, len(travel_news)))
+        count = 1
+        for headline in headlines:
+            print(Fore.CYAN + "  " + str(count) + ". " + headline)
+            count = count + 1
+
+    elif re.search(r"joke|funny|laugh|humor", user_input_clean):
+        joke = random.choice(jokes)
+        print(Fore.YELLOW + "TravelBot: " + joke)
+
+    elif re.search(r"history|previous|past chat", user_input_clean):
+        user_hist = history.get(name, [])
+        if len(user_hist) == 0:
+            print(Fore.RED + "TravelBot: No chat history yet.")
+        else:
+            print(Fore.WHITE + Back.BLUE + " Chat History - " + name + " " + Style.RESET_ALL)
+            start = len(user_hist) - 20
+            if start < 0:
+                start = 0
+            for i in range(start, len(user_hist)):
+                entry = user_hist[i]
+                if entry["role"] == "user":
+                    print(Fore.GREEN + "  You       : " + Fore.WHITE + entry["text"])
+                else:
+                    print(Fore.CYAN + "  TravelBot : " + Fore.WHITE + entry["text"])
+
+    elif re.search(r"help|what can you do|commands", user_input_clean):
+        print(Fore.WHITE + Back.BLUE + " What I Can Do " + Style.RESET_ALL)
+        print(Fore.GREEN + "  - recommend / suggest : Get a travel destination")
+        print(Fore.GREEN + "  - packing / pack      : Get a packing list")
+        print(Fore.GREEN + "  - weather             : Check weather at a destination")
+        print(Fore.GREEN + "  - time                : Find local time in a city")
+        print(Fore.GREEN + "  - news                : Read latest travel news")
+        print(Fore.GREEN + "  - joke                : Hear a travel joke")
+        print(Fore.GREEN + "  - history             : View chat history")
+        print(Fore.GREEN + "  - exit / bye          : End the conversation")
+
+    elif re.search(r"exit|bye|goodbye|quit", user_input_clean):
+        history[name].append({"role": "bot", "text": "Goodbye!"})
+        f = open(HISTORY_FILE, "w")
         json.dump(history, f, indent=2)
+        f.close()
+        print(Fore.CYAN + "TravelBot: Safe travels, " + name + "! Come back anytime. Goodbye!")
+        running = False
 
-
-def record_message(history: dict, name: str, role: str, text: str):
-    history.setdefault(name, []).append(
-        {"role": role, "text": text, "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-    )
-
-
-# ─── Helpers ──────────────────────────────────────────────────────────────────
-
-def normalize_input(text: str) -> str:
-    return re.sub(r"\s+", " ", text.strip().lower())
-
-
-def bot_say(msg: str, color=Fore.CYAN):
-    print(color + f"TravelBot: {msg}")
-
-
-def user_ask(prompt: str) -> str:
-    return input(Fore.YELLOW + f"You: ")
-
-
-def section_header(title: str):
-    print(Fore.WHITE + Back.BLUE + f" {title} " + Style.RESET_ALL)
-
-
-# ─── Features ─────────────────────────────────────────────────────────────────
-
-def show_help():
-    section_header("What I Can Do")
-    commands = [
-        ("recommend / suggest",   "Get a travel destination suggestion"),
-        ("packing / pack",        "Get a smart packing list"),
-        ("weather",               "Check simulated weather at a destination"),
-        ("time / local time",     "Find local time in a city"),
-        ("news",                  "Read latest travel news"),
-        ("joke / funny",          "Hear a travel joke"),
-        ("history",               "View our chat history"),
-        ("help",                  "Show this menu"),
-        ("exit / bye",            "End the conversation"),
-    ]
-    for cmd, desc in commands:
-        print(Fore.GREEN + f"  • {cmd:<22}" + Fore.WHITE + desc)
-    print()
-
-
-def recommend(name: str, history: dict):
-    bot_say("Beaches, mountains, cities, deserts, or forests?")
-    preference = normalize_input(user_ask("You: "))
-    record_message(history, name, "user", preference)
-
-    if preference in destinations:
-        suggestion = random.choice(destinations[preference])
-        bot_say(f"How about {suggestion}?", Fore.GREEN)
-        bot_say("Do you like it? (yes / no)", Fore.CYAN)
-        answer = normalize_input(user_ask("You: "))
-        record_message(history, name, "user", answer)
-
-        if re.search(r"\byes\b", answer):
-            bot_say(f"Awesome! Enjoy your trip to {suggestion}! ✈", Fore.GREEN)
-            conversation_memory.setdefault(name, {})["last_destination"] = suggestion
-        elif re.search(r"\bno\b", answer):
-            bot_say("Let's try another one.", Fore.RED)
-            recommend(name, history)
-        else:
-            bot_say("I'll take that as a maybe — let me suggest again.", Fore.RED)
-            recommend(name, history)
     else:
-        bot_say(f"Sorry, I don't have '{preference}' destinations yet. Try: beaches, mountains, cities, deserts, forests.", Fore.RED)
+        print(Fore.RED + "TravelBot: I did not quite catch that. Could you rephrase? Type help to see what I can do.")
 
-    save_history(history)
-    show_help()
-
-
-def packing_tips(name: str, history: dict):
-    bot_say("What type of trip? (beach / mountain / city / desert / forest)")
-    trip_type = normalize_input(user_ask("You: "))
-    record_message(history, name, "user", trip_type)
-
-    bot_say("Where are you headed?")
-    location = normalize_input(user_ask("You: "))
-    record_message(history, name, "user", location)
-
-    bot_say("How many days?")
-    days = user_ask("You: ").strip()
-    record_message(history, name, "user", days)
-
-    matched_list = None
-    for key in packing_lists:
-        if re.search(key, trip_type):
-            matched_list = packing_lists[key]
-            break
-
-    if matched_list:
-        bot_say(f"Smart packing list for {days} days in {location.title()}:", Fore.GREEN)
-        for item in matched_list:
-            print(Fore.GREEN + f"  ✓ {item}")
-    else:
-        bot_say(f"General packing tips for {days} days in {location.title()}:", Fore.GREEN)
-        for item in ["Pack versatile clothes", "Bring chargers/adapters", "Check the weather forecast",
-                     "Carry a copy of your documents", "Pack a small first-aid kit"]:
-            print(Fore.GREEN + f"  ✓ {item}")
-
-    save_history(history)
-
-
-def check_weather(name: str, history: dict):
-    bot_say("Which destination do you want the weather for?")
-    city = normalize_input(user_ask("You: "))
-    record_message(history, name, "user", city)
-
-    if city in weather_data:
-        w = weather_data[city]
-        bot_say(f"Weather in {city.title()}:", Fore.GREEN)
-        print(Fore.GREEN + f"  🌡  Temperature : {w['temp']}")
-        print(Fore.GREEN + f"  🌤  Condition   : {w['condition']}")
-    else:
-        bot_say(
-            f"I don't have weather data for '{city.title()}' yet. "
-            "Try: Bali, Tokyo, Paris, Swiss Alps, Himalayas, etc.",
-            Fore.RED,
-        )
-
-    save_history(history)
-
-
-def local_time(name: str, history: dict):
-    bot_say("Which city's local time do you want to know?")
-    city = normalize_input(user_ask("You: "))
-    record_message(history, name, "user", city)
-
-    if city in city_timezones:
-        offset = city_timezones[city]
-        utc_now = datetime.utcnow()
-        # Apply offset (handle half-hour zones like Mumbai)
-        total_minutes = int(utc_now.hour * 60 + utc_now.minute + offset * 60)
-        local_hour = (total_minutes // 60) % 24
-        local_min = total_minutes % 60
-        local_time_str = f"{local_hour:02d}:{local_min:02d}"
-        sign = "+" if offset >= 0 else ""
-        bot_say(f"Current local time in {city.title()}: {local_time_str} (UTC{sign}{offset})", Fore.GREEN)
-    else:
-        bot_say(
-            f"I don't have timezone data for '{city.title()}' yet. "
-            "Try: Tokyo, Paris, New York, London, Dubai, Singapore, etc.",
-            Fore.RED,
-        )
-
-    save_history(history)
-
-
-def show_news():
-    section_header("Latest Travel News")
-    headlines = random.sample(travel_news, min(4, len(travel_news)))
-    for i, headline in enumerate(headlines, 1):
-        print(Fore.CYAN + f"  {i}. {headline}")
-    print()
-
-
-def tell_joke():
-    bot_say(random.choice(jokes), Fore.YELLOW)
-
-
-def show_chat_history(name: str, history: dict):
-    user_history = history.get(name, [])
-    if not user_history:
-        bot_say("No chat history yet for this session.", Fore.RED)
-        return
-    section_header(f"Chat History — {name}")
-    for entry in user_history[-20:]:  # show last 20 messages
-        role_label = Fore.GREEN + "You        " if entry["role"] == "user" else Fore.CYAN + "TravelBot  "
-        print(f"  {role_label}" + Fore.WHITE + f"[{entry['time']}]  {entry['text']}")
-    print()
-
-
-# ─── Main Chat Loop ───────────────────────────────────────────────────────────
-
-def chat():
-    history = load_history()
-
-    section_header("TravelBot — Your AI Travel Companion")
-    bot_say("Hello! I'm TravelBot. I'm here to help you plan your next adventure!")
-
-    name = input(Fore.YELLOW + "What's your name? ").strip() or "Traveler"
-    record_message(history, name, "bot", f"Hello {name}!")
-
-    # Greet returning users
-    if name in history and len(history[name]) > 1:
-        bot_say(f"Welcome back, {name}! Great to see you again.", Fore.GREEN)
-        last_dest = conversation_memory.get(name, {}).get("last_destination")
-        if last_dest:
-            bot_say(f"Last time we talked about {last_dest}. Ready for a new adventure?", Fore.GREEN)
-    else:
-        bot_say(f"Nice to meet you, {name}! Let's plan your next adventure.", Fore.GREEN)
-
-    show_help()
-
-    # Intent patterns
-    patterns = [
-        (r"recommend|suggest|destination|where (should|can) i go", "recommend"),
-        (r"pack|packing|luggage|suitcase|what (to|should i) bring", "packing"),
-        (r"weather|climate|temperature|forecast",                    "weather"),
-        (r"time|local time|what time is it|timezone",                "time"),
-        (r"news|latest|update|headline",                             "news"),
-        (r"joke|funny|laugh|humor|lol",                              "joke"),
-        (r"history|previous|past (chat|conversation)",               "history"),
-        (r"help|\?|what can you do|commands",                        "help"),
-        (r"exit|bye|goodbye|quit|see you|later",                     "exit"),
-    ]
-
-    while True:
-        user_input = input(Fore.YELLOW + f"\n{name}: ").strip()
-        if not user_input:
-            continue
-        normalized = normalize_input(user_input)
-        record_message(history, name, "user", normalized)
-        save_history(history)
-
-        matched_intent = None
-        for pattern, intent in patterns:
-            if re.search(pattern, normalized):
-                matched_intent = intent
-                break
-
-        if matched_intent == "recommend":
-            recommend(name, history)
-        elif matched_intent == "packing":
-            packing_tips(name, history)
-        elif matched_intent == "weather":
-            check_weather(name, history)
-        elif matched_intent == "time":
-            local_time(name, history)
-        elif matched_intent == "news":
-            show_news()
-        elif matched_intent == "joke":
-            tell_joke()
-        elif matched_intent == "history":
-            show_chat_history(name, history)
-        elif matched_intent == "help":
-            show_help()
-        elif matched_intent == "exit":
-            record_message(history, name, "bot", "Goodbye!")
-            save_history(history)
-            bot_say(f"Safe travels, {name}! Come back anytime. Goodbye! ✈", Fore.CYAN)
-            break
-        else:
-            bot_say(
-                "I didn't quite catch that. Could you rephrase? "
-                "(Type 'help' to see what I can do.)",
-                Fore.RED,
-            )
-
-
-if __name__ == "__main__":
-    chat()
+    f = open(HISTORY_FILE, "w")
+    json.dump(history, f, indent=2)
+    f.close()

@@ -5,123 +5,146 @@ from colorama import init, Fore
 
 init(autoreset=True)
 
-# ── Load dataset ───────────────────────────────────────────────────────────────
 try:
     df = pd.read_csv("imdb_top_1000.csv")
 except FileNotFoundError:
     print(Fore.RED + "Error: The file 'imdb_top_1000.csv' was not found.")
     raise SystemExit
 
-# ── Build unique sorted genre list ────────────────────────────────────────────
 genres = sorted({g.strip() for xs in df["Genre"].dropna().str.split(", ") for g in xs})
 
+print(Fore.BLUE + "Welcome to your Personal Movie Recommendation Assistant!\n")
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-def dots():
-    for _ in range(3):
-        print(Fore.YELLOW + ".", end="", flush=True)
-        time.sleep(0.5)
+name = input(Fore.YELLOW + "What's your name? ").strip()
+if name == "":
+    name = "Friend"
 
+print(Fore.GREEN + "\nGreat to meet you, " + name + "!\n")
+print(Fore.BLUE + "Let's find the perfect movie for you!\n")
 
-def senti(p):
-    return "Positive 😊" if p > 0 else "Negative 😞" if p < 0 else "Neutral 😐"
+print(Fore.GREEN + "\nAvailable Genres:")
+genre_count = 1
+for g in genres:
+    print(Fore.CYAN + "  " + str(genre_count) + ". " + g)
+    genre_count = genre_count + 1
+print()
 
+genre = None
+while genre is None:
+    x = input(Fore.YELLOW + "Enter genre number or name: ").strip()
+    if x.isdigit() and 1 <= int(x) <= len(genres):
+        genre = genres[int(x) - 1]
+    else:
+        x_titled = x.title()
+        if x_titled in genres:
+            genre = x_titled
+        else:
+            print(Fore.RED + "Invalid input. Try again.\n")
 
-# ── Core recommendation engine ────────────────────────────────────────────────
-def recommend(genre=None, mood=None, rating=None, n=5):
-    d = df
-    if genre:
-        d = d[d["Genre"].str.contains(genre, case=False, na=False)]
-    if rating is not None:
-        d = d[d["IMDB_Rating"] >= rating]
-    if d.empty:
-        return "No suitable movie recommendations found."
+mood = input(Fore.YELLOW + "How do you feel today? (Describe your mood): ").strip()
 
-    d, need_nonneg, out = d.sample(frac=1).reset_index(drop=True), bool(mood), []
-    for _, r in d.iterrows():
-        ov = r.get("Overview")
-        if pd.isna(ov):
-            continue
-        pol = TextBlob(ov).sentiment.polarity
-        if (not need_nonneg) or pol >= 0:
-            out.append((r["Series_Title"], pol))
-            if len(out) == n:
-                break
+print(Fore.BLUE + "\nAnalyzing mood", end="", flush=True)
+print(Fore.YELLOW + ".", end="", flush=True)
+time.sleep(0.5)
+print(Fore.YELLOW + ".", end="", flush=True)
+time.sleep(0.5)
+print(Fore.YELLOW + ".", end="", flush=True)
+time.sleep(0.5)
 
-    return out if out else "No suitable movie recommendations found."
+mp = TextBlob(mood).sentiment.polarity
 
+if mp > 0:
+    md = "positive"
+elif mp < 0:
+    md = "negative"
+else:
+    md = "neutral"
 
-# ── Display results ────────────────────────────────────────────────────────────
-def show(recs, name):
-    print(Fore.YELLOW + f"\n🍿 AI-Analyzed Movie Recommendations for {name}:")
-    for i, (t, p) in enumerate(recs, 1):
-        print(f"{Fore.CYAN}{i}. 🎥 {t} (Polarity: {p:.2f}, {senti(p)})")
+print(Fore.GREEN + "\nYour mood is " + md + " (Polarity: " + str(round(mp, 2)) + ").\n")
 
-
-# ── Input helpers ─────────────────────────────────────────────────────────────
-def get_genre():
-    print(Fore.GREEN + "\nAvailable Genres:")
-    for i, g in enumerate(genres, 1):
-        print(f"  {Fore.CYAN}{i:>2}. {g}")
-    print()
-    while True:
-        x = input(Fore.YELLOW + "Enter genre number or name: ").strip()
-        if x.isdigit() and 1 <= int(x) <= len(genres):
-            return genres[int(x) - 1]
-        x = x.title()
-        if x in genres:
-            return x
-        print(Fore.RED + "Invalid input. Try again.\n")
-
-
-def get_rating():
-    while True:
-        x = input(Fore.YELLOW + "Enter minimum IMDB rating (7.6–9.3) or 'skip': ").strip()
-        if x.lower() == "skip":
-            return None
+rating = None
+rating_done = False
+while not rating_done:
+    x = input(Fore.YELLOW + "Enter minimum IMDB rating (7.6-9.3) or 'skip': ").strip()
+    if x.lower() == "skip":
+        rating_done = True
+    else:
         try:
             r = float(x)
             if 7.6 <= r <= 9.3:
-                return r
-            print(Fore.RED + "Rating out of range. Try again.\n")
+                rating = r
+                rating_done = True
+            else:
+                print(Fore.RED + "Rating out of range. Try again.\n")
         except ValueError:
             print(Fore.RED + "Invalid input. Try again.\n")
 
+print(Fore.BLUE + "\nFinding movies for " + name, end="", flush=True)
+print(Fore.YELLOW + ".", end="", flush=True)
+time.sleep(0.5)
+print(Fore.YELLOW + ".", end="", flush=True)
+time.sleep(0.5)
+print(Fore.YELLOW + ".", end="", flush=True)
+time.sleep(0.5)
+print()
 
-# ── Main program ──────────────────────────────────────────────────────────────
-print(Fore.BLUE + "🎥 Welcome to your Personal Movie Recommendation Assistant! 🎥\n")
-name = input(Fore.YELLOW + "What's your name? ").strip() or "Friend"
-print(f"\n{Fore.GREEN}Great to meet you, {name}!\n")
-print(Fore.BLUE + "🔍 Let's find the perfect movie for you!\n")
+getting_recs = True
 
-genre = get_genre()
-mood  = input(Fore.YELLOW + "How do you feel today? (Describe your mood): ").strip()
-print(Fore.BLUE + "\nAnalyzing mood", end="", flush=True)
-dots()
-mp = TextBlob(mood).sentiment.polarity
-md = "positive 😊" if mp > 0 else "negative 😞" if mp < 0 else "neutral 😐"
-print(f"\n{Fore.GREEN}Your mood is {md} (Polarity: {mp:.2f}).\n")
+while getting_recs:
+    d = df.copy()
 
-rating = get_rating()
-print(f"{Fore.BLUE}\nFinding movies for {name}", end="", flush=True)
-dots()
+    if genre:
+        d = d[d["Genre"].str.contains(genre, case=False, na=False)]
 
-recs = recommend(genre=genre, mood=mood, rating=rating, n=5)
-if isinstance(recs, str):
-    print(Fore.RED + "\n" + recs + "\n")
-else:
-    show(recs, name)
+    if rating is not None:
+        d = d[d["IMDB_Rating"] >= rating]
 
-while True:
-    a = input(Fore.YELLOW + "\nWould you like more recommendations? (yes/no): ").strip().lower()
-    if a == "no":
-        print(Fore.GREEN + f"\nEnjoy your movie picks, {name}! 🎬🍿\n")
-        break
-    elif a == "yes":
-        recs = recommend(genre=genre, mood=mood, rating=rating, n=5)
-        if isinstance(recs, str):
-            print(Fore.RED + "\n" + recs + "\n")
-        else:
-            show(recs, name)
+    if d.empty:
+        print(Fore.RED + "\nNo suitable movie recommendations found.\n")
     else:
-        print(Fore.RED + "Invalid choice. Please type yes or no.\n")
+        d = d.sample(frac=1).reset_index(drop=True)
+        need_nonneg = bool(mood)
+        recs = []
+
+        for idx in range(len(d)):
+            row = d.iloc[idx]
+            ov = row.get("Overview")
+            if pd.isna(ov):
+                continue
+            pol = TextBlob(ov).sentiment.polarity
+            if (not need_nonneg) or pol >= 0:
+                recs.append((row["Series_Title"], pol))
+            if len(recs) == 5:
+                break
+
+        if len(recs) == 0:
+            print(Fore.RED + "\nNo suitable movie recommendations found.\n")
+        else:
+            print(Fore.YELLOW + "\nAI-Analyzed Movie Recommendations for " + name + ":")
+            i = 1
+            for title, pol in recs:
+                if pol > 0:
+                    sentiment = "Positive"
+                elif pol < 0:
+                    sentiment = "Negative"
+                else:
+                    sentiment = "Neutral"
+                print(Fore.CYAN + str(i) + ". " + title + " (Polarity: " + str(round(pol, 2)) + ", " + sentiment + ")")
+                i = i + 1
+
+    a = input(Fore.YELLOW + "\nWould you like more recommendations? (yes/no): ").strip().lower()
+
+    if a == "no":
+        print(Fore.GREEN + "\nEnjoy your movie picks, " + name + "!\n")
+        getting_recs = False
+    elif a == "yes":
+        print(Fore.BLUE + "\nFinding more movies", end="", flush=True)
+        print(Fore.YELLOW + ".", end="", flush=True)
+        time.sleep(0.5)
+        print(Fore.YELLOW + ".", end="", flush=True)
+        time.sleep(0.5)
+        print(Fore.YELLOW + ".", end="", flush=True)
+        time.sleep(0.5)
+        print()
+    else:
+        print(Fore.RED + "Invalid choice. Try again.\n")
