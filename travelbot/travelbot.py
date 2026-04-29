@@ -251,3 +251,4 @@ while running:
     f = open(HISTORY_FILE, "w")
     json.dump(history, f, indent=2)
     f.close()
+

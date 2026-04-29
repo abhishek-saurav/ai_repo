@@ -211,3 +211,4 @@ while running:
         print(Fore.GREEN + "\nEnjoy your movie, " + player_name + "!\n")
         running = False
     print()
+

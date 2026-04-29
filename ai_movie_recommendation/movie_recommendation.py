@@ -148,3 +148,4 @@ while getting_recs:
         print()
     else:
         print(Fore.RED + "Invalid choice. Try again.\n")
+

@@ -349,3 +349,4 @@ while play_again == "yes":
     play_again = input(Fore.CYAN + "Play again? (yes/no): " + Style.RESET_ALL).strip().lower()
 
 print(Fore.CYAN + "Thanks for playing, " + player_name + "! Final - Wins: " + str(wins) + ", Losses: " + str(losses) + ", Ties: " + str(ties))
+

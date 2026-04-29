@@ -37,3 +37,4 @@ print("Displaying first image and prediction...")
 plt.imshow(x_test[0], cmap=plt.cm.binary)
 plt.title("Predicted: " + str(predictions[0].argmax()))
 plt.show()
+
