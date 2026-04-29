@@ -186,7 +186,7 @@ while running:
         city = re.sub(r"\s+", " ", city_raw.strip().lower())
         if city in city_timezones:
             offset = city_timezones[city]
-            utc_now = datetime.datetime.utcnow()
+            utc_now = datetime.datetime.now(datetime.timezone.utc)
             total_minutes = int(utc_now.hour * 60 + utc_now.minute + offset * 60)
             local_hour = (total_minutes // 60) % 24
             local_min = total_minutes % 60
